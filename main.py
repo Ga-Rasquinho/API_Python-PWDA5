@@ -30,7 +30,6 @@ def get_user():
                 "tipo_usu": user[4]
             }
         )
-        
     return jsonify(users)
 
 #Criar usuário
