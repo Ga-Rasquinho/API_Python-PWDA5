@@ -15,6 +15,10 @@ mydb = mysql.connector.connect(
 #Listar usuário
 @app.route('/list', methods = ['GET'])
 def get_user():
+    """
+    Função que lista usuários
+    :return: jsonify(user) -> list
+    """
     cursor = mydb.cursor()
     cursor.execute('SELECT * FROM usuario')
     users = cursor.fetchall() 
@@ -34,9 +38,14 @@ def get_user():
         
     return jsonify(users)
 
+
 #Criar usuário
 @app.route('/create', methods = ['POST'])
 def create_user():
+    """
+    Função que cria o usuário
+    :return: jsonify("Message")
+    """
     cursor = mydb.cursor()
     user = request.json
     hash_password = generate_password_hash(user['senha'], method='pbkdf2:sha256') #Criptografia de senha
@@ -45,9 +54,14 @@ def create_user():
     mydb.commit()
     return jsonify(Mensagem = 'Usuário cadastro com sucesso')
 
-#Login em desenvolvimento... 
+
+#Precisa ser aprimorado
 @app.route('/login', methods = ['POST'])
 def login_user():
+    """
+    Função que realiza o login do usuário
+    :return: jsonify("Message")
+    """
     cursor = mydb.cursor()
     login = request.json     
     
@@ -64,10 +78,34 @@ def login_user():
         else:
             return jsonify("Falha ao logar")
 
-#Desativar usuário em desenvolvimento
-@app.route('/disable', methods=['POST'])
-def delete_user():
-    pass
+
+@app.route('/disable/<int:user_id>'   , methods=['POST'])
+def delete_user(user_id):
+    """
+    Função que desabilita usuário
+    :return: jsonify("Message")
+    """
+    cursor = mydb.cursor()
+
+    sql = f"update  usuario set usuario_ativo = 0 where id = {user_id}"
+    cursor.execute(sql)
+    mydb.commit()
+
+    return jsonify("Usuário desativado")
+
+@app.route('/able/<int:user_id>'   , methods=['POST'])
+def able_user(user_id):
+    """
+    Função que habilitado usuário
+    :return: jsonify("Message")
+    """
+    cursor = mydb.cursor()
+
+    sql = f"update  usuario set usuario_ativo = 1 where id = {user_id}"
+    cursor.execute(sql)
+    mydb.commit()
+
+    return jsonify("Usuário ativado")
 
 #Main
 if __name__ == '__main__':
