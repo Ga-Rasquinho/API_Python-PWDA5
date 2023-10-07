@@ -12,34 +12,7 @@ mydb = mysql.connector.connect(
     database = 'usuarios_pwa5'
 )
 
-#Listar usuário
-@app.route('/list', methods = ['GET'])
-def get_user():
-    """
-    Função que lista usuários
-    :return: jsonify(user) -> list
-    """
-    cursor = mydb.cursor()
-    cursor.execute('SELECT * FROM usuario')
-    users = cursor.fetchall() 
 
-    users_list = list()
-    for user in users:
-        users_list.append(
-            {
-                'id': user[0],
-                'nome_usuario': user[1],
-                'email': user[2],
-                'senha': user[3],
-                'tipo_usu': user[4],
-                'usuario_ativo': user[5]	
-            }   
-        )
-        
-    return jsonify(users)
-
-
-#Criar usuário
 @app.route('/create', methods = ['POST'])
 def create_user():
     """
@@ -49,9 +22,14 @@ def create_user():
     cursor = mydb.cursor()
     user = request.json
     hash_password = generate_password_hash(user['senha'], method='pbkdf2:sha256') #Criptografia de senha
-    sql = f"INSERT INTO usuario (nome_usuario, email, senha) VALUES ('{user['nome_usuario']}', '{user['email']}', '{hash_password}')"
-    cursor.execute(sql)
-    mydb.commit()
+
+    try: 
+        sql = f"INSERT INTO usuario (nome_usuario, email, senha) VALUES ('{user['nome_usuario']}', '{user['email']}', '{hash_password}')"
+        cursor.execute(sql)
+        mydb.commit()
+    except Exception as e:
+        return jsonify(f"Falha ao cadastrar: {str(e)}")
+    
     return jsonify(Mensagem = 'Usuário cadastro com sucesso')
 
 
@@ -62,51 +40,28 @@ def login_user():
     Função que realiza o login do usuário
     :return: jsonify("Message")
     """
-    cursor = mydb.cursor()
-    login = request.json     
-    
-    sql = f"select * from usuario where email = '{login['email']}'"
-    cursor.execute(sql)
-    user = cursor.fetchone()
-    
-    print (user[4])
-    if user[4] == 1:
-        return jsonify("Logado como admin")
-    else:
-        if user and check_password_hash(user[3], login['senha']):
-            return jsonify("Login feito com sucesso")
+    try:
+        cursor = mydb.cursor()
+        login = request.json     
+        
+        sql = f"select * from usuario where email = '{login['email']}'"
+        cursor.execute(sql)
+        user = cursor.fetchone()
+
+        if user[4] == 1:
+            return jsonify("Logado como admin")
         else:
-            return jsonify("Falha ao logar")
+            if user and check_password_hash(user[3], login['senha']):
+                return jsonify("Login feito com sucesso")
+            else:
+                return jsonify("Falha ao logar")
+            
+    except:
+        return jsonify(f"Falha ao logar, credências incorretas")
 
 
-@app.route('/disable/<int:user_id>'   , methods=['POST'])
-def delete_user(user_id):
-    """
-    Função que desabilita usuário
-    :return: jsonify("Message")
-    """
-    cursor = mydb.cursor()
-
-    sql = f"update  usuario set usuario_ativo = 0 where id = {user_id}"
-    cursor.execute(sql)
-    mydb.commit()
-
-    return jsonify("Usuário desativado")
-
-@app.route('/able/<int:user_id>'   , methods=['POST'])
-def able_user(user_id):
-    """
-    Função que habilitado usuário
-    :return: jsonify("Message")
-    """
-    cursor = mydb.cursor()
-
-    sql = f"update  usuario set usuario_ativo = 1 where id = {user_id}"
-    cursor.execute(sql)
-    mydb.commit()
-
-    return jsonify("Usuário ativado")
-
-#Main
 if __name__ == '__main__':
+    """
+    Main
+    """
     app.run()
