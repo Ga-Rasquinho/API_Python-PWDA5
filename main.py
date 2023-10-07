@@ -33,7 +33,7 @@ def get_user():
                 'senha': user[3],
                 'tipo_usu': user[4],
                 'usuario_ativo': user[5]	
-            }
+            }   
         )
         
     return jsonify(users)
