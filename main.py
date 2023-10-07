@@ -27,7 +27,8 @@ def get_user():
                 'nome_usuario': user[1],
                 'email': user[2],
                 'senha': user[3],
-                "tipo_usu": user[4]
+                'tipo_usu': user[4],
+                'usuario_ativo': user[5]	
             }
         )
         
@@ -53,11 +54,20 @@ def login_user():
     sql = f"select * from usuario where email = '{login['email']}'"
     cursor.execute(sql)
     user = cursor.fetchone()
-
-    if user and check_password_hash(user[3], login['senha']):
-        return jsonify("Login feito com sucesso")
+    
+    print (user[4])
+    if user[4] == 1:
+        return jsonify("Logado como admin")
     else:
-        return jsonify("Falha ao logar")
+        if user and check_password_hash(user[3], login['senha']):
+            return jsonify("Login feito com sucesso")
+        else:
+            return jsonify("Falha ao logar")
+
+#Desativar usuário em desenvolvimento
+@app.route('/disable', methods=['POST'])
+def delete_user():
+    pass
 
 #Main
 if __name__ == '__main__':
