@@ -194,6 +194,29 @@ def add_book():
     return jsonify(message="Livro adicionado com sucesso")
 
 
+@app.route('/disable_book/<int:id_livro>', methods=['PUT'])
+@jwt_required()
+def disable_book(id_livro):
+    """
+    Função que habilita livros
+    """
+    teste = "INATIVO"
+    try:
+        cursor = mydb.cursor()
+        sql = f"update livros set status_livro = 'INATIVO' where id_livro = {id_livro}"   
+        cursor.execute(sql)
+
+        if cursor.rowcount == 0:
+            return jsonify("Falha ao desativar livro, livro não encontrado")
+
+        mydb.commit()
+    
+    except Exception as e:
+        return jsonify(f"Error:{e}")
+    
+    return jsonify("Livro desativado com sucesso")
+
+
 @app.route('/delete_book', methods=['DELETE'])
 def delete_book(): 
     pass
