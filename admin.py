@@ -17,6 +17,7 @@ mydb = mysql.connector.connect(
 
 
 @app.route('/list', methods = ['GET'])
+@jwt_required()
 def get_users():
     """
     Função que lista usuários
@@ -43,6 +44,7 @@ def get_users():
 
 
 @app.route('/disable/<int:user_id>', methods=['PUT'])
+@jwt_required()
 def disable_user(user_id):
     """
     Função que desabilita usuário
@@ -71,6 +73,7 @@ def disable_user(user_id):
 
 
 @app.route('/enable/<int:user_id>', methods=['PUT'])
+@jwt_required()
 def able_user(user_id):
     """
     Função que habilitado usuário
@@ -97,6 +100,7 @@ def able_user(user_id):
 
 
 @app.route('/delete/<int:user_id>', methods=['DELETE'])
+@jwt_required()
 def delete_user(user_id):
     """
     Função que deleta usuário
@@ -115,7 +119,7 @@ def delete_user(user_id):
         result = cursor.fetchone()
 
         if not result:
-            return jsonify("Falha ao desativar, usuário não encontrado")
+            return jsonify("Falha ao deletar, usuário não encontrado")
         
         cursor.execute(sql)
         mydb.commit()
@@ -177,11 +181,13 @@ def show_books():
         
     return jsonify(books_list)
 
+
 @app.route('/add_book', methods=['POST'])
 @jwt_required()
 def add_book():
     """
     Função que adiciona livros
+    :return: jsonify(Message)
     """
     user_id = get_jwt_identity()
     data = request.json
@@ -199,6 +205,7 @@ def add_book():
 def disable_book(id_livro):
     """
     Função que habilita livros
+    :return: jsonify(Message)
     """
     teste = "INATIVO"
     try:
@@ -217,14 +224,100 @@ def disable_book(id_livro):
     return jsonify("Livro desativado com sucesso")
 
 
-@app.route('/delete_book', methods=['DELETE'])
-def delete_book(): 
-    pass
+@app.route('/delete_book/<int:id_livro>', methods=['DELETE'])
+@jwt_required()
+def delete_book(id_livro): 
+    """
+    Função que deleta livros
+    :return: jsonify(message)
+    """
+    cursor = mydb.cursor()
+
+    sql = f'delete from livros where id_livro = {id_livro}'
+
+    try:
+        authorization_query = f"select id_livro from livros where id = {id_livro}"
+        cursor.execute(authorization_query)
+        result = cursor.fetchone()
+
+        if not result:
+            return jsonify("Falha ao deletar, livro não encontrado")
+        
+        cursor.execute(sql)
+        mydb.commit()
+
+    except Exception as e:
+        return jsonify(f"Falha ao deletar livro: {str(e)}")
+
+    return jsonify("Livro excluído com sucesso!")
 
 
 @app.route('/edit_book', methods=['PUT'])
+@jwt_required()
 def edit_book():
-    pass
+    """
+    Função que edita os livros
+    :return: jsonify(Message)
+    """
+    cursor = mydb.cursor()
+    book = request.json
+    sql = "UPDATE livros SET nome_livro = %s, autor_livro = %s, categoria_livro = %s, preco_livro = %s WHERE id_livro = %s"
+
+    try:
+        authorization_query = f"select id_livro from livros where id_livro = {book['id_livro']}"
+        cursor.execute(authorization_query)
+        result = cursor.fetchone()
+
+        if not result:
+            return jsonify("Falha ao editar, livro não encontrado")
+        
+    except Exception as e:
+        return jsonify(f"Falha ao editar livro: {str(e)}")
+
+    cursor.execute(sql, (book['nome_livro'], book['autor_livro'], book['categoria_livro'], book['preco_livro'], book['id_livro']))
+    mydb.commit()
+    return jsonify("Livro editado com sucesso!")
+
+
+@app.route('/search_book', methods=['GET'])
+@jwt_required()
+def search_books():
+    """
+    """
+    find = False
+    cursor = mydb.cursor()
+    book = request.json 
+    try:
+        if 'nome_livro' in book and book is not None:
+            search = cursor.execute(f"select nome_livro, autor_livro, categoria_livro, preco_livro from livros where nome_livro = '{book['nome_livro']}' and status_livro != 'INATIVO'")
+            if search is not None:
+                find = True
+
+        elif 'categoria_livro' in book:
+            search = cursor.execute(f"select nome_livro, autor_livro, categoria_livro, preco_livro from livros where categoria_livro = '{book['categoria_livro']}' and status_livro != 'INATIVO'")
+            if search is not None:
+                find = True
+
+        #Lista Livros selecionados
+        if find is True:    
+            books = cursor.fetchall() 
+
+            books_list = list()
+            for book in books:
+                books_list.append(
+                    {
+                        'nome_livro': book[0],
+                        'autor_livro': book[1],
+                        'categoria_livro': book[2],
+                        'preco_livro': book[3]
+                    }   
+                )
+            return jsonify(books_list)
+        else:
+            return jsonify('Nenhum resultado encontrado.')
+        
+    except Exception as e:
+        return jsonify(f"Erro:{e}")
 
 
 #Main
