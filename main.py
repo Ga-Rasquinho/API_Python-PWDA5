@@ -48,7 +48,7 @@ def login_user():
         cursor.execute(sql)
         user = cursor.fetchone()
 
-        if user[4] == 1:
+        if user[4] == 1 and user[3] == login['senha']:
             return jsonify("Logado como admin")
         else:
             if user and check_password_hash(user[3], login['senha']):
