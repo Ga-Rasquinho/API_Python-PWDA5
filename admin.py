@@ -16,7 +16,7 @@ mydb = mysql.connector.connect(
 )
 
 
-@app.route('/list', methods = ['GET'])
+@app.route('/list_users', methods = ['GET'])
 @jwt_required()
 def get_users():
     """
@@ -43,7 +43,7 @@ def get_users():
     return jsonify(users_list)
 
 
-@app.route('/disable/<int:user_id>', methods=['PUT'])
+@app.route('/disable_user/<int:user_id>', methods=['PUT'])
 @jwt_required()
 def disable_user(user_id):
     """
@@ -72,9 +72,9 @@ def disable_user(user_id):
     return jsonify("Usuário desativado com sucesso!")
 
 
-@app.route('/enable/<int:user_id>', methods=['PUT'])
+@app.route('/enable_user/<int:user_id>', methods=['PUT'])
 @jwt_required()
-def able_user(user_id):
+def enable_user(user_id):
     """
     Função que habilitado usuário
     :return: jsonify("Message")
@@ -99,7 +99,7 @@ def able_user(user_id):
     return jsonify("Usuário ativado com sucesso!")
 
 
-@app.route('/delete/<int:user_id>', methods=['DELETE'])
+@app.route('/delete_user/<int:user_id>', methods=['DELETE'])
 @jwt_required()
 def delete_user(user_id):
     """
@@ -150,9 +150,29 @@ def login_user():
             return jsonify(access_token=access_token)
         else:
             return jsonify("Falha ao Autenticar")
+            
     except Exception as e:
         return jsonify(f"Error{e}")
 
+
+@app.route('/add_book', methods=['POST'])
+@jwt_required()
+def add_book():
+    """
+    Função que adiciona livros
+    :return: jsonify(Message)
+    """
+    user_id = get_jwt_identity()
+    data = request.json
+
+    cursor = mydb.cursor()
+    if 'nome_livro' in data and 'autor_livro' in data and 'categoria_livro' in data and 'preco_livro' in data:
+        sql = "insert into livros (nome_livro, autor_livro, categoria_livro, preco_livro, usuario_id) values (%s, %s, %s, %s, %s)"
+        cursor.execute(sql, (data['nome_livro'], data['autor_livro'], data['categoria_livro'], data['preco_livro'], user_id))
+        mydb.commit()
+        return jsonify(message="Livro adicionado com sucesso")
+    else:
+        return jsonify(message="Erro ao cadastrar livro, forneça todos os campos necessários")
 
 @app.route('/show_books', methods=['GET'])
 @jwt_required()
@@ -182,24 +202,6 @@ def show_books():
     return jsonify(books_list)
 
 
-@app.route('/add_book', methods=['POST'])
-@jwt_required()
-def add_book():
-    """
-    Função que adiciona livros
-    :return: jsonify(Message)
-    """
-    user_id = get_jwt_identity()
-    data = request.json
-
-    cursor = mydb.cursor()
-    sql = f"insert into livros (nome_livro, autor_livro, categoria_livro, preco_livro, usuario_id) values (%s, %s, %s, %s, %s)"
-    cursor.execute(sql, (data['nome_livro'], data['autor_livro'], data['categoria_livro'], data['preco_livro'], user_id))
-    mydb.commit()
-    
-    return jsonify(message="Livro adicionado com sucesso")
-
-
 @app.route('/disable_book/<int:id_livro>', methods=['PUT'])
 @jwt_required()
 def disable_book(id_livro):
@@ -207,14 +209,13 @@ def disable_book(id_livro):
     Função que habilita livros
     :return: jsonify(Message)
     """
-    teste = "INATIVO"
     try:
         cursor = mydb.cursor()
         sql = f"update livros set status_livro = 'INATIVO' where id_livro = {id_livro}"   
         cursor.execute(sql)
 
         if cursor.rowcount == 0:
-            return jsonify("Falha ao desativar livro, livro não encontrado")
+            return jsonify("Falha ao desativar livro, livro não encontrado ou já desativado")
 
         mydb.commit()
     
@@ -222,6 +223,29 @@ def disable_book(id_livro):
         return jsonify(f"Error:{e}")
     
     return jsonify("Livro desativado com sucesso")
+
+
+@app.route('/enable_book/<int:id_livro>', methods=['PUT'])
+@jwt_required()
+def enable_book(id_livro):
+    """
+    Função que habilita livros
+    :return: jsonify(Message)
+    """
+    try:
+        cursor = mydb.cursor()
+        sql = f"update livros set status_livro = 'ATIVO' where id_livro = {id_livro}"   
+        cursor.execute(sql)
+
+        if cursor.rowcount == 0:
+            return jsonify("Falha ao ativar livro, livro não encontrado ou já ativo.")
+
+        mydb.commit()
+    
+    except Exception as e:
+        return jsonify(f"Error:{e}")
+    
+    return jsonify("Livro ativado com sucesso")
 
 
 @app.route('/delete_book/<int:id_livro>', methods=['DELETE'])
@@ -236,7 +260,7 @@ def delete_book(id_livro):
     sql = f'delete from livros where id_livro = {id_livro}'
 
     try:
-        authorization_query = f"select id_livro from livros where id = {id_livro}"
+        authorization_query = f"select id_livro from livros where id_livro = {id_livro}"
         cursor.execute(authorization_query)
         result = cursor.fetchone()
 
@@ -289,19 +313,21 @@ def search_books():
     book = request.json 
     try:
         if 'nome_livro' in book and book is not None:
-            search = cursor.execute(f"select nome_livro, autor_livro, categoria_livro, preco_livro from livros where nome_livro = '{book['nome_livro']}' and status_livro != 'INATIVO'")
-            if search is not None:
+            teste = (f"select nome_livro, autor_livro, categoria_livro, preco_livro from livros where nome_livro = '{book['nome_livro']}'")
+            cursor.execute(teste)
+            books = cursor.fetchall()
+            if books:
                 find = True
 
-        elif 'categoria_livro' in book:
-            search = cursor.execute(f"select nome_livro, autor_livro, categoria_livro, preco_livro from livros where categoria_livro = '{book['categoria_livro']}' and status_livro != 'INATIVO'")
-            if search is not None:
+        elif 'categoria_livro' in book and book is not None:
+            search = cursor.execute(f"select nome_livro, autor_livro, categoria_livro, preco_livro from livros where categoria_livro = '{book['categoria_livro']}'")
+            books = cursor.fetchall()
+            if books:
                 find = True
 
         #Lista Livros selecionados
-        if find is True:    
-            books = cursor.fetchall() 
-
+        if find:    
+    
             books_list = list()
             for book in books:
                 books_list.append(
