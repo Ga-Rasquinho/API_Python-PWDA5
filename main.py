@@ -5,6 +5,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'MinhaChaveSecreta123'
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 180 #3 minutos
 jwt = JWTManager(app)
 
 #Conexão com o banco de dados
@@ -144,12 +145,12 @@ def show_books():
     return jsonify(books_list)
 
 
-@app.route('/show_my_books', methods=['GET'])
+@app.route('/show_my_sales_books', methods=['GET'])
 @jwt_required()
-def show_my_books():
+def show_my_sales_books():
     """
     Função que lista os livros
-    :return: jsonify(books) -> list
+    :return: jsonify(books_list) -> list
     """
 
     cursor = mydb.cursor()
@@ -182,6 +183,7 @@ def buy_book():
     """
     cursor = mydb.cursor()
     data = request.json
+    user_id = get_jwt_identity()
 
     try:
         find_book = f"select status_livro from livros where id_livro = {data['id_livro']} and nome_livro = '{data['nome_livro']}'"
@@ -189,7 +191,7 @@ def buy_book():
         result = cursor.fetchone()
 
         if result is not None and result[0] == "ATIVO":
-            sql = f"update livros set status_livro = 'VENDIDO' where id_livro = {data['id_livro']}"
+            sql = f"update livros set status_livro = 'VENDIDO', usuario_comprador = {user_id} where id_livro = {data['id_livro']}"
             cursor.execute(sql)
             mydb.commit()
             return jsonify("Livro comprado com sucesso!")
@@ -199,6 +201,33 @@ def buy_book():
     except Exception as e:
         return jsonify(f"Error:{e}")
 
+@app.route("/show_my_purchased_books", methods=["GET"])
+@jwt_required()
+def show_my_purchased_books():
+    """
+    Fução que mostra os livros que o usuário comprou
+    :return: jsonify(books_list) -> list
+    """
+    cursor = mydb.cursor()
+    user_id = get_jwt_identity()
+
+    sql = f"select * from livros where status_livro != 'INATIVO' and usuario_comprador = {user_id}"
+    cursor.execute(sql)
+    books = cursor.fetchall() 
+
+    books_list = list()
+    for book in books:
+        books_list.append(
+            {   
+                'id_livro': book[0],
+                'nome_livro': book[1],
+                'autor_livro': book[2],
+                'categoria_livro': book[3],
+                'preco_livro': book[4]
+            }   
+        )
+    
+    return jsonify(books_list)
 
 if __name__ == '__main__':
     """
