@@ -119,6 +119,34 @@ def add_book():
     return jsonify(message="Livro adicionado com sucesso")
 
 
+@app.route('/edit_book', methods=['PUT'])
+@jwt_required()
+def edit_book():
+    """
+    Função que edita os livros
+    :return: jsonify(Message)
+    """
+    cursor = mydb.cursor()
+    book = request.json
+    user_id = get_jwt_identity()
+    sql = "UPDATE livros SET nome_livro = %s, autor_livro = %s, categoria_livro = %s, preco_livro = %s WHERE id_livro = %s AND usuario_id = %s"
+
+    try:
+        authorization_query = f"select id_livro from livros where id_livro = {book['id_livro']} and usuario_id = {user_id}"
+        cursor.execute(authorization_query)
+        result = cursor.fetchone()
+
+        if not result:
+            return jsonify("Falha ao editar, livro não encontrado")
+        
+    except Exception as e:
+        return jsonify(f"Falha ao editar livro: {str(e)}")
+
+    cursor.execute(sql, (book['nome_livro'], book['autor_livro'], book['categoria_livro'], book['preco_livro'], book['id_livro'], user_id))
+    mydb.commit()
+    return jsonify("Livro editado com sucesso!")
+
+
 @app.route('/show_books', methods=['GET'])
 @jwt_required()
 def show_books():
