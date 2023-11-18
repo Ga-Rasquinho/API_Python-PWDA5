@@ -208,6 +208,8 @@ def show_my_sales_books():
 @jwt_required()
 def buy_book():
     """
+    Função que permite o usuário comprar livros
+    :return: jsonify(Message)
     """
     cursor = mydb.cursor()
     data = request.json
