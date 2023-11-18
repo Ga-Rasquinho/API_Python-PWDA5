@@ -18,6 +18,7 @@ create table livros(
     preco_livro double not null,
     status_livro varchar(10) not null default "ATIVO",
     usuario_id int,
+    usuario_comprador int default null,
     foreign key (usuario_id) references usuario(id)
 );
 
